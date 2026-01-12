@@ -27,6 +27,8 @@ const STATE = {
     settings: { // Defaults, overwritten by DB
         companyName: 'UltraStream Gerenciador',
         billingMsg: 'Olá {nome}, seu plano {plano} vence dia {vencimento}. Para renovar, entre em contato!',
+        monthlyGoal: 5000, // PRO
+        serverCredits: {}, // PRO: { serverName: count }
         prices: {
             monthly: { price: 30, cost: 10 },
             quarterly: { price: 80, cost: 25 },
@@ -87,7 +89,8 @@ const els = {
     mobileClientsGrid: document.getElementById('clients-table-mobile'),
     netProfit: document.getElementById('net-profit-display'),
     btnExport: document.getElementById('btn-export-csv'),
-    inputImport: document.getElementById('csv-import-file')
+    inputImport: document.getElementById('csv-import-file'),
+    goalBar: id => document.getElementById('goal-progress-bar')
 };
 
 // --- Initialization ---
@@ -242,6 +245,31 @@ function loadSettingsFromDB() {
         });
 }
 
+function loadSettingsIntoForm() {
+    const s = STATE.settings;
+    if (!s) return;
+
+    // Prices & Costs
+    const f = els.financialForm;
+    if (f) {
+        if (f.price_monthly) f.price_monthly.value = s.prices.monthly.price;
+        if (f.cost_monthly) f.cost_monthly.value = s.prices.monthly.cost;
+        if (f.price_quarterly) f.price_quarterly.value = s.prices.quarterly.price;
+        if (f.cost_quarterly) f.cost_quarterly.value = s.prices.quarterly.cost;
+        if (f.price_semiannual) f.price_semiannual.value = s.prices.semiannual.price;
+        if (f.cost_semiannual) f.cost_semiannual.value = s.prices.semiannual.cost;
+        if (f.price_annual) f.price_annual.value = s.prices.annual.price;
+        if (f.cost_annual) f.cost_annual.value = s.prices.annual.cost;
+        if (f.monthly_goal) f.monthly_goal.value = s.monthlyGoal || 5000;
+    }
+
+    // General
+    const companyInput = document.getElementById('company-name');
+    const billingMsgInput = document.getElementById('billing-msg');
+    if (companyInput) companyInput.value = s.companyName || 'UltraStreamG';
+    if (billingMsgInput) billingMsgInput.value = s.billingMsg || '';
+}
+
 function saveSettingsToDB() {
     if (!currentUser) return;
     db.collection('users').doc(currentUser.uid).collection('data').doc('settings')
@@ -266,7 +294,8 @@ function setupRealtimeClientsListener() {
             renderDashboard();
             renderClientsTable();
             renderBillingQueue();
-            renderFinancialReports(); // Sync Pro Financials
+            renderFinancialReports();
+            updateGoalProgress(); // PRO
             initGrowthChart();
         }, (error) => {
             console.error("Error getting clients: ", error);
@@ -344,10 +373,12 @@ function deleteClient(id) {
     if (!currentUser) return;
     if (confirm('Excluir este cliente?')) {
         db.collection('users').doc(currentUser.uid).collection('clients').doc(id).delete()
-            .then(() => alert('Cliente excluído.'))
+            .then(() => {
+                showToast('Cliente excluído.');
+            })
             .catch(e => {
                 console.error(e);
-                alert('Erro ao excluir: ' + e.message);
+                showToast('Erro ao excluir: ' + e.message, 'error');
             });
     }
 }
@@ -395,8 +426,10 @@ function setupForms() {
         STATE.settings.prices.semiannual.cost = parseFloat(fd.get('cost_semiannual'));
         STATE.settings.prices.annual.price = parseFloat(fd.get('price_annual'));
         STATE.settings.prices.annual.cost = parseFloat(fd.get('cost_annual'));
+        STATE.settings.monthlyGoal = parseFloat(fd.get('monthly_goal')) || 5000;
         saveSettingsToDB();
-        alert('Configurações salvas na Nuvem!');
+        showToast('Configurações financeiras salvas!');
+        updatePortalURL();
     });
 
     els.generalSettingsForm.addEventListener('submit', (e) => {
@@ -412,6 +445,7 @@ function setupForms() {
         const displayName = document.getElementById('profile-name').value;
         const photoURL = document.getElementById('profile-photo').value;
         const whatsapp = document.getElementById('profile-whatsapp').value;
+        const pixKey = document.getElementById('profile-pix').value;
 
         if (!currentUser) return;
 
@@ -422,6 +456,7 @@ function setupForms() {
                     displayName,
                     photoURL,
                     whatsapp,
+                    pixKey,
                     email: currentUser.email,
                     lastUpdated: new Date().toISOString()
                 }, { merge: true });
@@ -1016,6 +1051,17 @@ window.deleteClient = deleteClient;
 
 // Start App
 // --- User Profile ---
+// --- Calculations ---
+function updateGoalProgress() {
+    const total = STATE.clients.reduce((acc, c) => acc + (STATE.settings.prices[c.planType]?.price || 0), 0);
+    const goal = STATE.settings.monthlyGoal || 5000;
+    const pct = Math.min((total / goal) * 100, 100);
+    const bar = document.getElementById('goal-progress-bar');
+    if (bar) bar.style.width = pct + '%';
+    const label = document.getElementById('goal-progress-label');
+    if (label) label.textContent = `${pct.toFixed(1)}% da meta atingida (R$ ${total.toFixed(2)})`;
+}
+
 // --- User Profile ---
 function loadUserProfileUI() {
     if (!currentUser) return;
@@ -1038,15 +1084,38 @@ function loadUserProfileUI() {
     document.getElementById('profile-email').value = currentUser.email;
     document.getElementById('profile-photo').value = currentUser.photoURL || '';
 
-    // Fetch Extra Data from Firestore (WhatsApp)
+    // Fetch Extra Data from Firestore (WhatsApp, Pix)
     db.collection('users').doc(currentUser.uid).get().then(doc => {
         if (doc.exists) {
             const data = doc.data();
             if (data.whatsapp) {
                 document.getElementById('profile-whatsapp').value = data.whatsapp;
             }
+            if (data.pixKey) {
+                document.getElementById('profile-pix').value = data.pixKey;
+            }
         }
     });
+
+    db.collection('users').doc(currentUser.uid).collection('data').doc('settings').get().then(doc => {
+        updatePortalURL();
+    });
+}
+
+function updatePortalURL() {
+    const el = document.getElementById('portal-url-display');
+
+    if (currentUser) {
+        const base = window.location.href.split('index.html')[0];
+        if (el) el.value = `${base}portal.html?mid=${currentUser.uid}`;
+    }
+}
+
+function copyPortalLink() {
+    const el = document.getElementById('portal-url-display');
+    el.select();
+    document.execCommand('copy');
+    showToast('Link do Portal copiado!');
 }
 
 function setupLogout() {

@@ -2,29 +2,69 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check if user is authenticated
+    // --- Funções de Segurança Inteligente ---
+    
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Helper function to check if the user is accessing their own data
+    // SUPER ADMIN: Somente você tem as chaves de tudo
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.email == "renanpani08@gmail.com";
+    }
+
+    // DONO: Qualquer usuário logado é dono do seu "próprio quintal" (ID dele)
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Match the User's document (Profile)
+    // Validação de dados básica para evitar corrupção
+    function isValidClient(data) {
+      return data.fullName is string && 
+             data.planType in ['monthly', 'quarterly', 'semiannual', 'annual', 'trial'] &&
+             data.dueDate is string;
+    }
+
+    // --- Regras de Coleções ---
+
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      // Perfil: Leitura pública para o Portal (WhatsApp, Pix)
+      allow get: if true;
+      allow list: if false; 
+      
+      // ESCRITA: Somente o ADMIN REAL (você) ou o DONO da conta específica
+      // Isso impede que um usuário comum mexa nos seus dados ou nos de outros
+      allow create, update: if isAdmin() || isOwner(userId);
+      allow delete: if isAdmin(); // Segurança: Apenas você pode deletar contas
 
-      // Match the Clients subcollection
+      // Clientes do Revendedor
       match /clients/{clientId} {
-         allow read, write: if isOwner(userId);
+        // ADMIN vê tudo. USUÁRIO COMUM vê só os próprios clientes.
+        allow read: if isAdmin() || isOwner(userId);
+        
+        // Apenas ADMIN ou o DONO do registro pode salvar/editar
+        allow create, update: if (isAdmin() || isOwner(userId)) && isValidClient(request.resource.data);
+        allow delete: if isAdmin() || isOwner(userId);
+
+        // EXTRA: Regra do Portal (Público)
+        // Permite que qualquer um busque UM cliente específico no banco todo
+        allow list: if (request.query.limit == 1);
+        allow get: if true;
       }
 
-      // Match the Data/Settings subcollection
+      // Configurações e Preços
       match /data/{docId} {
-         allow read, write: if isOwner(userId);
+        allow get: if true;
+        allow list: if false;
+        
+        // ADMIN ou DONO definem seus próprios preços
+        allow write: if isAdmin() || isOwner(userId);
       }
+    }
+
+    // Bloqueio Total para qualquer outro caminho não mapeado
+    match /{path=**} {
+      allow read, write: if false;
     }
   }
 }

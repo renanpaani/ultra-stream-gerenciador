@@ -1314,3 +1314,74 @@ table tr:last-child td {
 .auth-divider::after {
     margin-left: 1em;
 }
+
+/* PRO: Financial Goal Card */
+.goal-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.4));
+    padding: 1.5rem !important;
+}
+
+.goal-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.progress-container {
+    height: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Audit Table */
+.audit-table th,
+.audit-table td {
+    padding: 1rem;
+    font-size: 0.85rem;
+}
+
+.audit-table tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.audit-action-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-create {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+    border: 1px solid var(--success);
+}
+
+.badge-update {
+    background: rgba(59, 130, 246, 0.2);
+    color: var(--primary);
+    border: 1px solid var(--primary);
+}
+
+.badge-delete {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+}
+
+.badge-renew {
+    background: rgba(139, 92, 246, 0.2);
+    color: var(--secondary);
+    border: 1px solid var(--secondary);
+}

@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <script>
-        if ('serviceWorker' in navigator) {
+        if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js');
             });
@@ -118,6 +118,17 @@
             <!-- Tab: Dashboard -->
             <section id="dashboard" class="tab-content active">
                 <div class="stats-grid">
+                    <!-- Goal Progress Bar (New PRO) -->
+                    <div class="stat-card goal-card" style="grid-column: span 4;">
+                        <div class="goal-header">
+                            <span>🎯 Meta Mensal: <strong id="goal-current-val">R$ 0,00</strong> / <span
+                                    id="goal-target-val">R$ 5.000,00</span></span>
+                            <span id="goal-percent">0%</span>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar" id="goal-progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
                     <!-- Cards will be injected by JS -->
                 </div>
 
@@ -451,20 +462,33 @@
                         </form>
                     </div>
 
-                    <div class="settings-card">
-                        <h3>Geral</h3>
-                        <form id="general-settings-form">
-                            <div class="form-group">
-                                <label>Nome da Empresa</label>
-                                <input type="text" id="company-name" value="UltraStreamG">
-                            </div>
-                            <div class="form-group">
-                                <label>Mensagem de Cobrança (WhatsApp)</label>
-                                <textarea id="billing-msg"
-                                    rows="4">Olá {nome}, seu plano {plano} vence dia {vencimento}. Para renovar, entre em contato!</textarea>
-                            </div>
-                            <button type="submit" class="btn-primary">Salvar Geral</button>
-                        </form>
+                </div>
+
+                <div class="settings-card">
+                    <h3>Geral</h3>
+                    <form id="general-settings-form">
+                        <div class="form-group">
+                            <label>Nome da Empresa</label>
+                            <input type="text" id="company-name" value="UltraStreamG">
+                        </div>
+                        <div class="form-group">
+                            <label>Mensagem de Cobrança (WhatsApp)</label>
+                            <textarea id="billing-msg"
+                                rows="4">Olá {nome}, seu plano {plano} vence dia {vencimento}. Para renovar, entre em contato!</textarea>
+                        </div>
+                        <button type="submit" class="btn-primary">Salvar Geral</button>
+                    </form>
+                </div>
+
+                <div class="settings-card">
+                    <h3>🌐 Portal do Cliente (PRO)</h3>
+                    <p class="subtitle">Seus clientes podem consultar vencimentos e Pix sozinhos.</p>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Seu Link do Portal</label>
+                        <div class="input-with-button">
+                            <input type="text" id="portal-url-display" readonly placeholder="Carregando link...">
+                            <button type="button" class="btn-secondary" onclick="copyPortalLink()">Copiar</button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -486,6 +510,10 @@
                         <div class="form-group">
                             <label>Email Atual</label>
                             <input type="email" id="profile-email" disabled style="opacity: 0.7; cursor: not-allowed;">
+                            <div class="form-group">
+                                <label>Sua Chave Pix (Para renovações)</label>
+                                <input type="text" id="profile-pix" placeholder="Sua chave Pix">
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Foto de Perfil (URL)</label>
