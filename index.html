@@ -10,12 +10,32 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <!-- Evolution Libraries -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js');
+            });
+        }
+    </script>
 </head>
 
 <body>
     <div class="app-container">
+        <!-- Mobile Header (Hidden on Desktop) -->
+        <div class="mobile-header">
+            <i class='bx bx-menu' id="mobile-menu-btn"></i>
+            <span class="mobile-title">UltraStream</span>
+            <div class="mobile-avatar">U</div>
+        </div>
+
         <!-- Sidebar Navigation -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="app-sidebar">
             <div class="logo-section">
                 <i class='bx bx-broadcast'></i>
                 <span>UltraStream Gerenciador</span>
@@ -58,6 +78,26 @@
                 </div>
             </div>
         </aside>
+
+        <!-- Bottom Navigation (Mobile Only) -->
+        <nav class="bottom-nav">
+            <button class="nav-btn active" data-tab="dashboard">
+                <i class='bx bx-grid-alt'></i>
+                <span>Início</span>
+            </button>
+            <button class="nav-btn" data-tab="list-clients">
+                <i class='bx bx-list-ul'></i>
+                <span>Clientes</span>
+            </button>
+            <button class="nav-btn" data-tab="billing-queue">
+                <i class='bx bx-time-five'></i>
+                <span>Cobrança</span>
+            </button>
+            <button class="nav-btn" data-tab="profile">
+                <i class='bx bx-user-circle'></i>
+                <span>Perfil</span>
+            </button>
+        </nav>
 
         <!-- Main Content Area -->
         <main class="main-content">
@@ -172,6 +212,37 @@
                     </div>
                 </div>
 
+                <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+                    <div class="settings-card chart-card">
+                        <div class="card-header">
+                            <h3><i class='bx bx-pie-chart-alt'></i> Market Share</h3>
+                            <p class="subtitle">Distribuição por Planos</p>
+                        </div>
+                        <div id="chart-plans-pie"></div>
+                    </div>
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <h3><i class='bx bx-badge-check'></i> Lucro Líquido Real</h3>
+                            <p class="subtitle">Faturamento total - Gasto com painéis</p>
+                        </div>
+                        <div class="profit-report" style="padding: 2rem; text-align: center;">
+                            <h2 id="net-profit-display"
+                                style="font-size: 3rem; color: var(--success); margin-bottom: 0.5rem;">R$ 0,00</h2>
+                            <p style="color: var(--text-secondary)">Baseado em clientes ativos</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-chart-section">
+                    <div class="settings-card chart-card">
+                        <div class="card-header">
+                            <h3><i class='bx bx-trending-up'></i> Crescimento de Clientes</h3>
+                            <p class="subtitle">Visão dos últimos 6 meses</p>
+                        </div>
+                        <div id="chart-growth"></div>
+                    </div>
+                </div>
+
                 <div class="recent-activity">
                     <h3>Clientes Recentes</h3>
                     <div class="table-container">
@@ -188,6 +259,17 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </section>
+
+            <!-- Tab: Billing Queue -->
+            <section id="billing-queue" class="tab-content">
+                <div class="card-header">
+                    <h3>🔔 Fila de Cobrança (Hoje)</h3>
+                    <p class="subtitle">Clientes que vencem hoje e precisam de atenção.</p>
+                </div>
+                <div id="billing-queue-list" class="mobile-cards-grid">
+                    <!-- JS will populate -->
                 </div>
             </section>
 
@@ -245,6 +327,23 @@
                                 <input type="text" name="notes" placeholder="Ex: Prefere pagar via Pix">
                             </div>
                         </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Servidor / URL</label>
+                                <input type="text" name="serverUrl" placeholder="Ex: p2.servidor.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Login do Painel (Sua ref.)</label>
+                                <input type="text" name="panelLogin" placeholder="Ex: Revenda_01">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Tags / Categoria</label>
+                                <input type="text" name="tags"
+                                    placeholder="Ex: VIP, Amigo, Teste (separar por vírgula)">
+                            </div>
+                        </div>
                         <div class="form-actions">
                             <button type="button" class="btn-secondary" id="cancel-add">Cancelar</button>
                             <button type="submit" class="btn-primary">Salvar Cliente</button>
@@ -286,6 +385,11 @@
                             <!-- Populated by JS -->
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Mobile Card Layout -->
+                <div id="clients-table-mobile" class="mobile-cards-grid">
+                    <!-- JS will populate -->
                 </div>
             </section>
 

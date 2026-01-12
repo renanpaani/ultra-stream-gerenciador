@@ -1,6 +1,23 @@
-// Global Variables
 let currentUser = null;
 let clientsUnsubscribe = null;
+let growthChart = null;
+
+// UI Utilities
+function showToast(text, type = 'success') {
+    Toastify({
+        text: text,
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        stopOnFocus: true,
+        style: {
+            background: type === 'success' ? "var(--success)" :
+                type === 'error' ? "var(--danger)" : "var(--primary)",
+            borderRadius: "10px",
+            boxShadow: "0 10px 15px -3px rgba(0,0,0,0.3)"
+        }
+    }).showToast();
+}
 
 // State Management
 const STATE = {
@@ -65,7 +82,12 @@ const els = {
         quarterly: document.getElementById('rev-quarterly'),
         semiannual: document.getElementById('rev-semiannual'),
         annual: document.getElementById('rev-annual')
-    }
+    },
+    billingQueue: document.getElementById('billing-queue-list'),
+    mobileClientsGrid: document.getElementById('clients-table-mobile'),
+    netProfit: document.getElementById('net-profit-display'),
+    btnExport: document.getElementById('btn-export-csv'),
+    inputImport: document.getElementById('csv-import-file')
 };
 
 // --- Initialization ---
@@ -74,6 +96,8 @@ function init() {
     setupNavigation();
     setupForms();
     setupLogout(); // Added Logout
+    setupMobileMenu(); // Added Mobile Toggle
+    setupPortabilityListeners(); // Added
     applyTheme();
 
     // Clear old localstorage data (Privacy Request)
@@ -149,10 +173,11 @@ function setupAuthListeners() {
                 return db.collection('users').doc(res.user.uid).set(userProfile);
             })
             .then(() => {
-                alert('Conta criada com sucesso! WhatsApp registrado.');
+                showToast('Conta criada com sucesso! WhatsApp registrado.');
+                els.authOverlay.classList.remove('active'); // Close overlay after success
             })
             .catch((error) => {
-                alert('Erro no Cadastro: ' + error.message);
+                showToast('Erro no Cadastro: ' + error.message, 'error');
             });
     });
 
@@ -240,10 +265,13 @@ function setupRealtimeClientsListener() {
 
             renderDashboard();
             renderClientsTable();
+            renderBillingQueue();
+            renderFinancialReports(); // Sync Pro Financials
+            initGrowthChart();
         }, (error) => {
             console.error("Error getting clients: ", error);
             if (error.code === 'permission-denied') {
-                alert('Acesso Negado: Suas Regras de Segurança no Firebase podem estar incorretas.\nVerifique se copiou as regras exatamente como enviado.');
+                showToast('Acesso Negado: Regras de Segurança incorretas.', 'error');
             }
         });
 }
@@ -255,15 +283,15 @@ function addClient(clientData) {
 
     actionPromise
         .then(() => {
-            alert('Salvo com sucesso!');
+            showToast('Salvo com sucesso!');
             resetForm();
         })
         .catch((e) => {
             console.error("Erro ao salvar:", e);
             if (e.code === 'permission-denied') {
-                alert('Erro de Permissão: Você não tem permissão para salvar dados.\nVerifique as Regras do Firebase.');
+                showToast('Erro de Permissão: Verifique Regras Firebase.', 'error');
             } else {
-                alert('Erro ao salvar: ' + e.message);
+                showToast('Erro ao salvar: ' + e.message, 'error');
             }
         });
 }
@@ -337,7 +365,11 @@ function setupNavigation() {
             els.pageTitle.textContent = btn.querySelector('span').textContent;
 
             if (tabId === 'dashboard') renderDashboard();
-            if (tabId === 'list-clients') renderClientsTable();
+            if (tabId === 'list-clients') {
+                renderClientsTable();
+                renderMobileCards();
+            }
+            if (tabId === 'billing-queue') renderBillingQueue();
         });
     });
 }
@@ -372,7 +404,7 @@ function setupForms() {
         STATE.settings.companyName = document.getElementById('company-name').value;
         STATE.settings.billingMsg = document.getElementById('billing-msg').value;
         saveSettingsToDB();
-        alert('Configurações salvas!');
+        showToast('Configurações salvas!');
     });
 
     els.profileForm.addEventListener('submit', (e) => {
@@ -395,12 +427,12 @@ function setupForms() {
                 }, { merge: true });
             })
             .then(() => {
-                alert('Perfil atualizado com sucesso!');
+                showToast('Perfil atualizado com sucesso!');
                 loadUserProfileUI(); // Refresh Sidebar
             })
             .catch((error) => {
                 console.error("Profile Update Error:", error);
-                alert('Erro ao atualizar perfil: ' + error.message);
+                showToast('Erro ao atualizar perfil: ' + error.message, 'error');
             });
     });
 
@@ -408,8 +440,8 @@ function setupForms() {
     document.getElementById('btn-reset-pass').addEventListener('click', () => {
         if (!currentUser) return;
         auth.sendPasswordResetEmail(currentUser.email)
-            .then(() => alert('Link de redefinição enviado para seu email: ' + currentUser.email))
-            .catch(err => alert('Erro: ' + err.message));
+            .then(() => showToast('Link de redefinição enviado para seu email: ' + currentUser.email))
+            .catch(err => showToast('Erro: ' + err.message, 'error'));
     });
 
     document.getElementById('btn-change-email-verify').addEventListener('click', () => {
@@ -418,14 +450,14 @@ function setupForms() {
 
         currentUser.updateEmail(newEmail)
             .then(() => {
-                alert('Email alterado com sucesso! Use o novo email no próximo login.');
+                showToast('Email alterado com sucesso! Use o novo email no próximo login.');
                 loadUserProfileUI();
             })
             .catch(err => {
                 if (err.code === 'auth/requires-recent-login') {
-                    alert('⚠️ Por segurança, saia e entre novamente no sistema antes de trocar o email.');
+                    showToast('⚠️ Por segurança, saia e entre novamente no sistema.', 'error');
                 } else {
-                    alert('Erro ao trocar email: ' + err.message);
+                    showToast('Erro ao trocar email: ' + err.message, 'error');
                 }
             });
     });
@@ -476,11 +508,11 @@ function renderDashboard() {
         </div>
         <div class="stat-card">
             <div class="stat-icon orange"><i class='bx bx-time-five'></i></div>
-            <div class="stat-info"><h5>Vencendo</h5><h3>${expiring}</h3></div>
+            <div class="stat-info"><h5>Vencendo (3d)</h5><h3>${expiring}</h3></div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon"><i class='bx bx-money'></i></div>
-            <div class="stat-info"><h5>Mensal</h5><h3>${formatCurrency(rev.monthly)}</h3></div>
+            <div class="stat-icon danger"><i class='bx bx-error-circle'></i></div>
+            <div class="stat-info"><h5>Vencidos</h5><h3>${STATE.clients.filter(c => new Date(c.dueDate) < new Date() && c.status === 'active').length}</h3></div>
         </div>
     `;
 
@@ -495,7 +527,14 @@ function renderDashboard() {
 
     const recent = [...STATE.clients].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
     els.recentTable.innerHTML = recent.map(c => `
-        <tr><td>${c.fullName}</td><td>${getPlanLabel(c.planType)}</td><td><span class="status-badge ${c.status}">${getStatusLabel(c.status)}</span></td></tr>
+        <tr>
+            <td>
+                <div>${c.fullName}</div>
+                <div style="font-size: 0.75rem; color: var(--warning)">${getRemainingDays(c.dueDate)}</div>
+            </td>
+            <td>${getPlanLabel(c.planType)}</td>
+            <td><span class="status-badge ${c.status}">${getStatusLabel(c.status)}</span></td>
+        </tr>
     `).join('');
 }
 
@@ -574,6 +613,276 @@ function renderClientsTable() {
             </td>
         </tr>
     `}).join('');
+
+    renderMobileCards(); // Added mobile support
+}
+
+function renderMobileCards() {
+    if (!els.mobileClientsGrid) return;
+
+    els.mobileClientsGrid.innerHTML = STATE.clients.map(c => renderClientCard(c)).join('');
+}
+
+function renderClientCard(c) {
+    let displayStatus = c.status;
+    if (c.status === 'active' && isExpiring(c.dueDate)) displayStatus = 'expiring';
+    else if (c.status === 'active' && new Date(c.dueDate) < new Date()) displayStatus = 'expired';
+
+    return `
+        <div class="client-mobile-card">
+            <div class="card-main">
+                <div>
+                    <div class="client-name">${c.fullName}</div>
+                    <div class="client-meta">${getPlanLabel(c.planType)} • ${c.phone}</div>
+                </div>
+                <span class="status-badge ${displayStatus}">${getStatusLabel(displayStatus)}</span>
+            </div>
+            <div class="card-details">
+                <div class="detail-item">
+                    <span class="label">Vencimento</span>
+                    <span class="value">${formatDate(c.dueDate)}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Tempo Restante</span>
+                    <span class="value">${getRemainingDays(c.dueDate)}</span>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="btn-primary" onclick="smartRenew('${c.id}')"><i class='bx bx-refresh'></i> Renovar</button>
+                <button class="btn-secondary" onclick="sendWhatsapp('${c.id}')"><i class='bx bxl-whatsapp'></i> WhatsApp</button>
+                <button class="btn-icon-small" onclick="editClient('${c.id}')"><i class='bx bx-pencil'></i></button>
+            </div>
+        </div>
+    `;
+}
+
+function getRemainingDays(dueDate) {
+    const diff = new Date(dueDate) - new Date();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    if (days < 0) return 'Vencido';
+    if (days === 0) return 'Vence Hoje';
+    return `${days} dias`;
+}
+
+function renderBillingQueue() {
+    if (!els.billingQueue) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    const expiringToday = STATE.clients.filter(c => {
+        const cDate = new Date(c.dueDate).toISOString().split('T')[0];
+        return cDate === today && c.status === 'active';
+    });
+
+    if (expiringToday.length === 0) {
+        els.billingQueue.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--text-secondary)">🎉 Nenhum cliente vencendo hoje!</div>';
+        return;
+    }
+
+    els.billingQueue.innerHTML = expiringToday.map(c => renderClientCard(c)).join('');
+}
+
+function smartRenew(id) {
+    const client = STATE.clients.find(c => c.id === id);
+    if (!client) return;
+
+    const currentDueDate = new Date(client.dueDate);
+    // Add 30 days or based on plan
+    const daysToAdd = 30; // Default to 30 for simplicity in one-click
+    const newDate = new Date(currentDueDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+
+    const update = {
+        dueDate: newDate.toISOString().split('T')[0],
+        status: 'active',
+        history: [{
+            date: new Date().toISOString(),
+            type: 'renew',
+            desc: `Renovação Automática (+${daysToAdd} dias)`
+        }, ...(client.history || [])]
+    };
+
+    db.collection('users').doc(currentUser.uid).collection('clients').doc(id).update(update)
+        .then(() => showToast(`Renovado! Próximo vencimento: ${formatDate(update.dueDate)}`))
+        .catch(e => showToast('Erro ao renovar: ' + e.message, 'error'));
+}
+
+// --- Professional Financials ---
+let plansPieChart = null;
+
+function renderFinancialReports() {
+    const rev = calculateRevenue();
+
+    // Calculate Net Profit
+    let totalCost = 0;
+    const p = STATE.settings.prices;
+    STATE.clients.forEach(c => {
+        if (c.status === 'active' && p[c.planType]) {
+            totalCost += p[c.planType].cost;
+        }
+    });
+
+    const netProfit = (rev.monthly + rev.quarterly + rev.semiannual + rev.annual) - totalCost;
+    if (els.netProfit) {
+        els.netProfit.textContent = formatCurrency(netProfit);
+    }
+
+    initPlansPieChart();
+}
+
+function initPlansPieChart() {
+    const counts = { monthly: 0, quarterly: 0, semiannual: 0, annual: 0 };
+    STATE.clients.forEach(c => {
+        if (counts[c.planType] !== undefined) counts[c.planType]++;
+    });
+
+    const options = {
+        series: Object.values(counts),
+        chart: { type: 'donut', height: 350, background: 'transparent' },
+        labels: ['Mensal', 'Trimestral', 'Semestral', 'Anual'],
+        colors: ['#3b82f6', '#06b6d4', '#8b5cf6', '#f59e0b'],
+        stroke: { show: false },
+        legend: { position: 'bottom', labels: { colors: '#94a3b8' } },
+        dataLabels: { enabled: true },
+        theme: { mode: 'dark' }
+    };
+
+    if (plansPieChart) {
+        plansPieChart.updateOptions(options);
+    } else {
+        const el = document.querySelector("#chart-plans-pie");
+        if (el) {
+            plansPieChart = new ApexCharts(el, options);
+            plansPieChart.render();
+        }
+    }
+}
+
+// --- Data Portability ---
+function setupPortabilityListeners() {
+    if (els.btnExport) {
+        els.btnExport.addEventListener('click', exportToCSV);
+    }
+    if (els.inputImport) {
+        els.inputImport.addEventListener('change', importFromCSV);
+    }
+}
+
+function exportToCSV() {
+    if (STATE.clients.length === 0) {
+        showToast('Nenhum cliente para exportar', 'error');
+        return;
+    }
+
+    const headers = ['fullName', 'phone', 'iptvUser', 'iptvPass', 'planType', 'dueDate', 'serverUrl', 'panelLogin', 'tags'];
+    const csvRows = [headers.join(',')];
+
+    STATE.clients.forEach(c => {
+        const row = headers.map(h => `"${(c[h] || '').replace(/"/g, '""')}"`);
+        csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `ultrastream_backup_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function importFromCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const text = e.target.result;
+        const rows = text.split('\n').filter(row => row.trim() !== '');
+        const headers = rows[0].split(',').map(h => h.replace(/"/g, '').trim());
+
+        const clientsToImport = rows.slice(1).map(row => {
+            const values = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+            const client = {};
+            headers.forEach((h, i) => {
+                let val = values[i] ? values[i].replace(/"/g, '').trim() : '';
+                client[h] = val;
+            });
+            return client;
+        });
+
+        // Batch add to Firestore
+        const promises = clientsToImport.map(c => addClient(c));
+        Promise.all(promises).then(() => {
+            showToast(`${clientsToImport.length} clientes importados com sucesso!`);
+            event.target.value = ''; // Reset input
+        }).catch(err => showToast('Erro na importação: ' + err.message, 'error'));
+    };
+    reader.readAsText(file);
+}
+
+// --- Analytics & Charts ---
+function initGrowthChart() {
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const now = new Date();
+    const last6Months = [];
+
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        last6Months.push({
+            month: months[d.getMonth()],
+            year: d.getFullYear(),
+            count: 0
+        });
+    }
+
+    // Process data
+    STATE.clients.forEach(c => {
+        if (!c.createdAt) return;
+        const cDate = new Date(c.createdAt);
+        last6Months.forEach(m => {
+            if (months.indexOf(m.month) === cDate.getMonth() && m.year === cDate.getFullYear()) {
+                m.count++;
+            }
+        });
+    });
+
+    const seriesData = last6Months.map(m => m.count);
+    const categories = last6Months.map(m => m.month);
+
+    const options = {
+        series: [{ name: 'Novos Clientes', data: seriesData }],
+        chart: {
+            type: 'area',
+            height: 350,
+            toolbar: { show: false },
+            animations: { enabled: true },
+            background: 'transparent'
+        },
+        colors: ['#3b82f6'],
+        fill: {
+            type: 'gradient',
+            gradient: { shadeIntensity: 1, opacityFrom: 0.7, opacityTo: 0.2 }
+        },
+        dataLabels: { enabled: false },
+        stroke: { curve: 'smooth', width: 3 },
+        xaxis: {
+            categories: categories,
+            labels: { style: { colors: '#94a3b8' } }
+        },
+        yaxis: {
+            labels: { style: { colors: '#94a3b8' } }
+        },
+        grid: { borderColor: 'rgba(255,255,255,0.05)' },
+        theme: { mode: 'dark' }
+    };
+
+    if (growthChart) {
+        growthChart.updateOptions(options);
+    } else {
+        growthChart = new ApexCharts(document.querySelector("#chart-growth"), options);
+        growthChart.render();
+    }
 }
 
 // Helpers & Utilities
@@ -749,6 +1058,23 @@ function setupLogout() {
                     console.log("Deslogado com sucesso");
                 }).catch(e => console.error("Erro logout:", e));
             }
+        });
+    }
+}
+
+function setupMobileMenu() {
+    const btn = document.getElementById('mobile-menu-btn');
+    const sidebar = document.getElementById('app-sidebar');
+    if (btn && sidebar) {
+        btn.addEventListener('click', () => {
+            sidebar.classList.toggle('mobile-active');
+        });
+
+        // Close when clicking nav buttons
+        document.querySelectorAll('.nav-btn').forEach(b => {
+            b.addEventListener('click', () => {
+                sidebar.classList.remove('mobile-active');
+            });
         });
     }
 }
