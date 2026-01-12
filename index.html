@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UltraStream Gerenciador</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-section">
+                <i class='bx bx-broadcast'></i>
+                <span>UltraStream Gerenciador</span>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-btn active" data-tab="dashboard">
+                    <i class='bx bx-grid-alt'></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-btn" data-tab="add-client">
+                    <i class='bx bx-user-plus'></i>
+                    <span>Novo Cliente</span>
+                </button>
+                <button class="nav-btn" data-tab="list-clients">
+                    <i class='bx bx-list-ul'></i>
+                    <span>Meus Clientes</span>
+                </button>
+                <button class="nav-btn" data-tab="settings">
+                    <i class='bx bx-cog'></i>
+                    <span>Configurações</span>
+                </button>
+                <button class="nav-btn" data-tab="profile">
+                    <i class='bx bx-user-circle'></i>
+                    <span>Meu Perfil</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="avatar">U</div>
+                    <div class="user-details">
+                        <span class="name">Admin User</span>
+                        <span class="role">Gerente</span>
+                    </div>
+                    <button id="btn-logout" class="icon-btn" title="Sair"
+                        style="background:none; border:none; color: var(--text-secondary); cursor: pointer; margin-left: auto;">
+                        <i class='bx bx-log-out' style="font-size: 1.2rem;"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-bar">
+                <h2 id="page-title">Dashboard</h2>
+                <div class="actions">
+                    <button class="icon-btn theme-toggle">
+                        <i class='bx bx-moon'></i>
+                    </button>
+                    <button class="icon-btn notifications">
+                        <i class='bx bx-bell'></i>
+                        <span class="badge"></span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Tab: Dashboard -->
+            <section id="dashboard" class="tab-content active">
+                <div class="stats-grid">
+                    <!-- Cards will be injected by JS -->
+                </div>
+
+                <div class="dashboard-widgets">
+                    <!-- Ranking Section -->
+                    <div class="widget ranking-widget">
+                        <h3>🏆 Ranking de Planos</h3>
+                        <div class="ranking-item">
+                            <span class="rank-icon">🔥</span>
+                            <div class="rank-info">
+                                <span class="rank-label">Mais Vendido</span>
+                                <strong id="rank-best">-</strong>
+                            </div>
+                        </div>
+                        <div class="ranking-item">
+                            <span class="rank-icon">❄️</span>
+                            <div class="rank-info">
+                                <span class="rank-label">Menos Usado</span>
+                                <strong id="rank-worst">-</strong>
+                            </div>
+                        </div>
+                        <div class="ranking-item">
+                            <span class="rank-icon">🔄</span>
+                            <div class="rank-info">
+                                <span class="rank-label">Trials Convertidos</span>
+                                <strong id="rank-converted">0</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profit Simulator -->
+                    <div class="widget simulator-widget">
+                        <h3>💰 Simulador de Lucro</h3>
+                        <div class="sim-controls">
+                            <div class="sim-group">
+                                <label>Preço (R$)</label>
+                                <input type="number" id="sim-price" value="30">
+                            </div>
+                            <div class="sim-group">
+                                <label>Qtd. Clientes</label>
+                                <input type="number" id="sim-qty" value="10">
+                            </div>
+                            <div class="sim-group">
+                                <label>Custo Unit. (R$)</label>
+                                <input type="number" id="sim-cost" value="10">
+                            </div>
+                        </div>
+                        <div class="sim-result">
+                            <div class="sim-row">
+                                <span>Faturamento:</span>
+                                <strong id="sim-revenue" class="text-success">R$ 300,00</strong>
+                            </div>
+                            <div class="sim-row">
+                                <span>Lucro Líquido:</span>
+                                <strong id="sim-profit" class="text-primary">R$ 200,00</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="revenue-section">
+                    <h3>Previsão de Faturamento</h3>
+                    <div class="revenue-grid">
+                        <div class="revenue-card month">
+                            <div class="icon-box"><i class='bx bx-calendar'></i></div>
+                            <div class="info">
+                                <span class="label">Mensal</span>
+                                <h4 id="rev-monthly">R$ 0,00</h4>
+                            </div>
+                        </div>
+                        <div class="revenue-card quarter">
+                            <div class="icon-box"><i class='bx bx-calendar-minus'></i></div>
+                            <div class="info">
+                                <span class="label">Trimestral (3 Meses)</span>
+                                <h4 id="rev-quarterly">R$ 0,00</h4>
+                            </div>
+                        </div>
+                        <div class="revenue-card semester">
+                            <div class="icon-box"><i class='bx bx-calendar-plus'></i></div>
+                            <div class="info">
+                                <span class="label">Semestral (6 Meses)</span>
+                                <h4 id="rev-semiannual">R$ 0,00</h4>
+                            </div>
+                        </div>
+                        <div class="revenue-card year">
+                            <div class="icon-box"><i class='bx bx-calendar-star'></i></div>
+                            <div class="info">
+                                <span class="label">Anual (1 Ano)</span>
+                                <h4 id="rev-annual">R$ 0,00</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recent-activity">
+                    <h3>Clientes Recentes</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Plano</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-recent-table">
+                                <!-- JS will populate -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Add Client -->
+            <section id="add-client" class="tab-content">
+                <div class="form-container">
+                    <h3>Cadastrar Novo Cliente</h3>
+                    <form id="new-client-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Nome Completo</label>
+                                <input type="text" name="fullName" required placeholder="Ex: João Silva">
+                            </div>
+                            <div class="form-group">
+                                <label>Telefone / WhatsApp</label>
+                                <input type="tel" name="phone" required placeholder="(11) 99999-9999">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Usuário IPTV</label>
+                                <input type="text" name="iptvUser" placeholder="usuario_iptv">
+                            </div>
+                            <div class="form-group">
+                                <label>Senha IPTV</label>
+                                <input type="text" name="iptvPass" placeholder="******">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Plano</label>
+                                <select name="planType" required>
+                                    <option value="monthly">Mensal</option>
+                                    <option value="quarterly">Trimestral</option>
+                                    <option value="semiannual">Semestral</option>
+                                    <option value="annual">Anual</option>
+                                    <option value="trial">Teste (24h)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Status Inicial</label>
+                                <select name="status">
+                                    <option value="active">Ativo</option>
+                                    <option value="pending">Pendente</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Data de Vencimento</label>
+                                <input type="date" name="dueDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Observações</label>
+                                <input type="text" name="notes" placeholder="Ex: Prefere pagar via Pix">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary" id="cancel-add">Cancelar</button>
+                            <button type="submit" class="btn-primary">Salvar Cliente</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Tab: List Clients -->
+            <section id="list-clients" class="tab-content">
+                <div class="list-controls">
+                    <div class="search-box">
+                        <i class='bx bx-search'></i>
+                        <input type="text" id="client-search" placeholder="Buscar por nome, usuário...">
+                    </div>
+                    <div class="filter-box">
+                        <select id="status-filter">
+                            <option value="all">Todos os Status</option>
+                            <option value="active">Ativos</option>
+                            <option value="expiring">Vencendo</option>
+                            <option value="expired">Vencidos</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container full-height">
+                    <table class="clients-table">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Contato</th>
+                                <th>Acesso</th>
+                                <th>Plano</th>
+                                <th>Vencimento</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clients-table-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Tab: Settings -->
+            <section id="settings" class="tab-content">
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <h3>Financeiro dos Planos</h3>
+                        <p class="subtitle">Defina o preço de venda e o custo (seu gasto) para cada plano.</p>
+
+                        <form id="financial-settings-form">
+                            <div class="plan-row">
+                                <span class="plan-name">Mensal</span>
+                                <div class="money-input">
+                                    <label>Venda (R$)</label>
+                                    <input type="number" step="0.01" name="price_monthly" value="30.00">
+                                </div>
+                                <div class="money-input cost">
+                                    <label>Custo (R$)</label>
+                                    <input type="number" step="0.01" name="cost_monthly" value="10.00">
+                                </div>
+                            </div>
+                            <div class="plan-row">
+                                <span class="plan-name">Trimestral</span>
+                                <div class="money-input">
+                                    <label>Venda (R$)</label>
+                                    <input type="number" step="0.01" name="price_quarterly" value="80.00">
+                                </div>
+                                <div class="money-input cost">
+                                    <label>Custo (R$)</label>
+                                    <input type="number" step="0.01" name="cost_quarterly" value="25.00">
+                                </div>
+                            </div>
+                            <div class="plan-row">
+                                <span class="plan-name">Semestral</span>
+                                <div class="money-input">
+                                    <label>Venda (R$)</label>
+                                    <input type="number" step="0.01" name="price_semiannual" value="140.00">
+                                </div>
+                                <div class="money-input cost">
+                                    <label>Custo (R$)</label>
+                                    <input type="number" step="0.01" name="cost_semiannual" value="50.00">
+                                </div>
+                            </div>
+                            <div class="plan-row">
+                                <span class="plan-name">Anual</span>
+                                <div class="money-input">
+                                    <label>Venda (R$)</label>
+                                    <input type="number" step="0.01" name="price_annual" value="250.00">
+                                </div>
+                                <div class="money-input cost">
+                                    <label>Custo (R$)</label>
+                                    <input type="number" step="0.01" name="cost_annual" value="90.00">
+                                </div>
+                            </div>
+                            <div class="form-actions right">
+                                <button type="submit" class="btn-primary">Salvar Preços</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3>Geral</h3>
+                        <form id="general-settings-form">
+                            <div class="form-group">
+                                <label>Nome da Empresa</label>
+                                <input type="text" id="company-name" value="UltraStreamG">
+                            </div>
+                            <div class="form-group">
+                                <label>Mensagem de Cobrança (WhatsApp)</label>
+                                <textarea id="billing-msg"
+                                    rows="4">Olá {nome}, seu plano {plano} vence dia {vencimento}. Para renovar, entre em contato!</textarea>
+                            </div>
+                            <button type="submit" class="btn-primary">Salvar Geral</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Profile -->
+            <section id="profile" class="tab-content">
+                <div class="settings-card" style="max-width: 600px; margin: 0 auto;">
+                    <h3>Perfil do Usuário</h3>
+                    <p class="subtitle">Gerencie suas informações pessoais e segurança da conta.</p>
+                    <form id="profile-settings-form">
+                        <div class="form-group">
+                            <label>Nome de Exibição</label>
+                            <input type="text" id="profile-name" placeholder="Seu Nome">
+                        </div>
+                        <div class="form-group">
+                            <label>WhatsApp (Contato)</label>
+                            <input type="tel" id="profile-whatsapp" placeholder="(00) 00000-0000">
+                        </div>
+                        <div class="form-group">
+                            <label>Email Atual</label>
+                            <input type="email" id="profile-email" disabled style="opacity: 0.7; cursor: not-allowed;">
+                        </div>
+                        <div class="form-group">
+                            <label>Foto de Perfil (URL)</label>
+                            <input type="text" id="profile-photo" placeholder="https://...">
+                        </div>
+                        <div class="auth-buttons" style="margin-top: 20px;">
+                            <button type="submit" class="btn-primary">Atualizar Perfil</button>
+                            <button type="button" class="btn-secondary" id="btn-change-email-verify">Alterar
+                                Email</button>
+                            <button type="button" class="btn-secondary" id="btn-reset-pass">Redefinir Senha</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+
+    <!-- Login Overlay -->
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="login-overlay active">
+        <!-- Login View -->
+        <div class="login-box" id="auth-login-view">
+            <div class="login-header">
+                <i class='bx bx-broadcast'></i>
+                <h2>UltraStream</h2>
+                <p>Acesse seu Gerenciador</p>
+            </div>
+
+            <button type="button" class="btn-google" id="btn-google-login">
+                <i class='bx bxl-google'></i>
+                Entrar com Google
+            </button>
+
+            <div class="auth-divider">ou usar email</div>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="login-email" required placeholder="email@exemplo.com">
+                </div>
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>Senha</label>
+                    <input type="password" id="login-pass" required placeholder="******">
+                </div>
+
+                <div class="auth-buttons" style="margin-top: 1.5rem">
+                    <button type="submit" class="btn-primary" style="width: 100%" id="btn-login-submit">Entrar</button>
+                    <p style="margin-top: 15px; font-size: 0.9rem; color: var(--text-secondary);">
+                        Não tem uma conta? <a href="#" id="go-to-register"
+                            style="color: var(--primary); text-decoration: none; font-weight: 500;">Cadastre-se</a>
+                    </p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Register View -->
+        <div class="login-box" id="auth-register-view" style="display: none;">
+            <div class="login-header">
+                <i class='bx bx-user-plus'></i>
+                <h2>Criar Conta</h2>
+                <p>Obrigatório: WhatsApp para contato</p>
+            </div>
+
+            <form id="register-form">
+                <div class="form-group">
+                    <label>Seu Nome</label>
+                    <input type="text" id="reg-name" required placeholder="Nome Completo">
+                </div>
+                <div class="form-group" style="margin-top: 12px;">
+                    <label>WhatsApp / Contato</label>
+                    <input type="tel" id="reg-whatsapp" required placeholder="(00) 00000-0000">
+                </div>
+                <div class="form-group" style="margin-top: 12px;">
+                    <label>Melhor Email</label>
+                    <input type="email" id="reg-email" required placeholder="seu@email.com">
+                </div>
+                <div class="form-group" style="margin-top: 12px;">
+                    <label>Defina uma Senha</label>
+                    <input type="password" id="reg-pass" required placeholder="No mínimo 6 caracteres">
+                </div>
+
+                <div class="auth-buttons" style="margin-top: 1.5rem">
+                    <button type="submit" class="btn-primary" style="width: 100%" id="btn-register-submit">Finalizar
+                        Cadastro</button>
+                    <p style="margin-top: 15px; font-size: 0.9rem; color: var(--text-secondary);">
+                        Já tem conta? <a href="#" id="go-to-login"
+                            style="color: var(--primary); text-decoration: none; font-weight: 500;">Fazer Login</a>
+                    </p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Timeline Modal -->
+    <div class="modal-overlay" id="timeline-modal">
+        <div class="modal-content">
+            <button class="close-modal" id="close-timeline"><i class='bx bx-x'></i></button>
+            <h3>Histórico do Cliente</h3>
+
+            <div class="timeline-input-group">
+                <input type="text" id="new-timeline-note" placeholder="Adicionar observação...">
+                <button id="add-timeline-note-btn"><i class='bx bx-send'></i></button>
+            </div>
+
+            <div class="timeline" id="timeline-list">
+                <!-- Timeline items injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- Firebase SDKs (Compat Version for Vanilla JS) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+    <!-- Config and App Logic -->
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
